@@ -18,7 +18,8 @@ app = Flask(__name__)
 CORS(app)
 
 # --- Google Gemini API Configuration (optional) ---
-
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}" if GEMINI_API_KEY else None
 
 # Global variables for model and scaler
 model = None
@@ -144,7 +145,7 @@ def ask_gemini(user_message):
                 {
                     "parts": [
                         {
-                            "text": f"You are a helpful BMI and health assistant. Provide accurate, friendly advice about BMI, nutrition, fitness, and general health topics.\n\nUser: {user_message}\nAssistant:"
+                            "text": f"You are a helpful BMI and health assistant. Provide accurate, friendly advice about BMI, nutrition, fitness, and general health topics. Keep responses concise (under 150 words).\n\nUser: {user_message}\nAssistant:"
                         }
                     ]
                 }
@@ -240,6 +241,7 @@ def home():
         "version": "1.0",
         "status": "active",
         "model_accuracy": round(model_accuracy * 100, 2) if model_accuracy is not None else None,
+        "chatbot_enabled": GEMINI_API_KEY is not None,
         "endpoints": {
             "/predict": "POST - Predict BMI class",
             "/chatbot": "POST - Chat with AI assistant (disabled if GEMINI_API_KEY not provided)",
@@ -256,7 +258,8 @@ def health_check():
         "status": "healthy",
         "model_loaded": model is not None,
         "scaler_loaded": scaler is not None,
-        "model_accuracy": round(model_accuracy * 100, 2) if model_accuracy is not None else None
+        "model_accuracy": round(model_accuracy * 100, 2) if model_accuracy is not None else None,
+        "chatbot_enabled": GEMINI_API_KEY is not None
     })
 
 @app.route('/predict', methods=['POST'])
@@ -416,6 +419,11 @@ if __name__ == '__main__':
         print("\n✓ Model loaded successfully!")
         if model_accuracy is not None:
             print(f"✓ Model Accuracy: {model_accuracy * 100:.2f}%")
+        if GEMINI_API_KEY:
+            print("✓ Gemini API configured - Chatbot enabled")
+        else:
+            print("⚠ Gemini API not configured - Chatbot disabled")
+            print("  To enable: Set GEMINI_API_KEY in .env file")
         print("\nStarting Flask server...")
         print("API available at: http://localhost:5000")
         print("=" * 50)
