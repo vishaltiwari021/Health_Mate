@@ -52,7 +52,7 @@ body {
 }
 
 .input-form h2 {
-    color: #667eea;
+    color: #060f36;
     margin-bottom: 25px;
     font-size: 1.8rem;
     font-weight: 600;
@@ -109,7 +109,7 @@ body {
 
 .predict-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 10px 25px rgba(49, 80, 215, 0.4);
 }
 
 .predict-btn:disabled {
@@ -130,7 +130,7 @@ body {
     border-radius: 15px;
     padding: 20px;
     margin-bottom: 20px;
-    border-left: 5px solid #667eea;
+    border-left: 5px solid #040c31;
 }
 
 .bmi-display {
@@ -142,7 +142,7 @@ body {
     font-size: 3rem;
     font-weight: 700;
     color: #667eea;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
 
 .bmi-class {
