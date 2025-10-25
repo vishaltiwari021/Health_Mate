@@ -8,8 +8,11 @@ async function checkAPIStatus() {
     try {
         const response = await fetch(`${API_BASE_URL}/health`);
         if (response.ok) {
+            const data = await response.json();
             if (statusIndicator) {
-                statusIndicator.textContent = 'API Online';
+                statusIndicator.textContent = data.chatbot_enabled 
+                    ? 'API Online • Chatbot Enabled' 
+                    : 'API Online • Chatbot Disabled';
                 statusIndicator.className = 'status-indicator status-online';
             }
             return true;
@@ -39,7 +42,6 @@ async function loadModelInfo() {
         const infoItems = document.querySelectorAll('.info-item');
         if (infoItems.length >= 4) {
             infoItems[0].querySelector('p').textContent = data.model_type || 'Random Forest';
-            // Ensure accuracy is displayed nicely
             infoItems[1].querySelector('p').textContent = (typeof data.accuracy === 'number') ? `${data.accuracy}%` : 'N/A';
             infoItems[2].querySelector('p').textContent = data.features?.join(', ') || 'Age, Height, Weight';
             infoItems[3].querySelector('p').textContent = `${(data.classes && data.classes.length) ? data.classes.length : 6} Categories`;
@@ -158,11 +160,32 @@ if (bmiForm) {
     });
 }
 
-// --- NEW: Chatbot functionality ---
+// --- IMPROVED CHATBOT FUNCTIONALITY ---
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 const chatWindow = document.getElementById('chat-window');
 const sendBtn = document.getElementById('send-btn');
+
+// Function to append message to chat window (FIXED)
+function appendMessage(sender, text) {
+    if (!chatWindow) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = (sender === 'User') ? 'chat-user' : 'chat-bot';
+
+    const senderSpan = document.createElement('strong');
+    senderSpan.textContent = sender;
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = text;
+    textSpan.style.display = 'block'; // Ensure text is on new line
+
+    msgDiv.appendChild(senderSpan);
+    msgDiv.appendChild(textSpan);
+
+    chatWindow.appendChild(msgDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll
+}
 
 // Handle chat form submission
 if (chatForm) {
@@ -175,58 +198,42 @@ if (chatForm) {
         appendMessage('User', message);
         if (chatInput) chatInput.value = '';
 
-        if (sendBtn) {
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Sending...';
-        }
+        // Get the button - could be sendBtn or the form button
+        const button = sendBtn || chatForm.querySelector('button[type="submit"]');
+        
+        if (button) {
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = 'Sending...';
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/chatbot`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ message })
-            });
+            try {
+                const response = await fetch(`${API_BASE_URL}/chatbot`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message })
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (response.ok && data.success && data.reply) {
-                appendMessage('Bot', data.reply);
-            } else if (data.error) {
-                appendMessage('Bot', `Error: ${data.error}`);
-            } else {
-                appendMessage('Bot', 'Sorry, I received an unexpected response.');
-            }
+                if (response.ok && data.success && data.reply) {
+                    appendMessage('Bot', data.reply);
+                } else if (data.error) {
+                    appendMessage('Bot', `Error: ${data.error}`);
+                } else {
+                    appendMessage('Bot', 'Sorry, I received an unexpected response.');
+                }
 
-        } catch (error) {
-            console.error('Chat error:', error);
-            appendMessage('Bot', `Sorry, I encountered an error: ${error.message}`);
-        } finally {
-            if (sendBtn) {
-                sendBtn.disabled = false;
-                sendBtn.textContent = 'Send';
+            } catch (error) {
+                console.error('Chat error:', error);
+                appendMessage('Bot', `Sorry, I encountered an error: ${error.message}`);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }
             }
         }
     });
-}
-
-// Function to append message to chat window
-function appendMessage(sender, text) {
-    if (!chatWindow) return;
-
-    const msgDiv = document.createElement('div');
-    msgDiv.className = (sender === 'User') ? 'chat-user' : 'chat-bot';
-
-    const senderSpan = document.createElement('strong');
-    senderSpan.textContent = sender + ': ';
-
-    const textSpan = document.createElement('span');
-    textSpan.textContent = text;
-
-    msgDiv.appendChild(senderSpan);
-    msgDiv.appendChild(textSpan);
-
-    chatWindow.appendChild(msgDiv);
-    chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll
 }
 
 // Allow Enter key to send message (Shift+Enter for new line)
@@ -240,8 +247,6 @@ if (chatInput) {
         }
     });
 }
-// --- END NEW SECTION ---
-
 
 // Initialize app
 async function initializeApp() {
@@ -255,7 +260,7 @@ async function initializeApp() {
 
         // Add welcome message to chatbot
         if (chatWindow) {
-            appendMessage('Bot', 'Hello! I\'m your BMI assistant. Ask me anything about BMI, health, or fitness!');
+            appendMessage('Bot', 'Hello! I\'m your BMI and health assistant. Ask me anything about BMI, nutrition, fitness, or general health topics!');
         }
     } else {
         console.warn('API is offline. Please start the Flask server.');
@@ -263,6 +268,10 @@ async function initializeApp() {
         const resultsContent = document.getElementById('results-content');
         if (resultsContent) {
             resultsContent.innerHTML = `<div class="error"><strong>API Offline:</strong> Please start the Flask server at ${API_BASE_URL}</div>`;
+        }
+        
+        if (chatWindow) {
+            appendMessage('Bot', 'API is currently offline. Please start the Flask server to use the chatbot.');
         }
     }
 }
